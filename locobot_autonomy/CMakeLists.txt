@@ -74,6 +74,12 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   locobot_autonomy/move_A_to_B_py.py
   locobot_autonomy/move_locobot_base_action_server.py
+  locobot_autonomy/image_viewer.py
+  locobot_autonomy/image_writer.py
+  locobot_autonomy/joint_subscriber.py
+  locobot_autonomy/odom_subscriber.py
+  locobot_autonomy/cube_locator.py
+  locobot_autonomy/move_base_client.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
