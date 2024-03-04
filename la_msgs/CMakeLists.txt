@@ -16,8 +16,8 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/MoveBase.action"
-  "srv/PixtoPoint.srv"
   "srv/Ptps.srv"
+  "action/MoveArm.action"
   DEPENDENCIES geometry_msgs std_msgs
  )
 

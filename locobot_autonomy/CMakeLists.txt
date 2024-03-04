@@ -15,6 +15,10 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
+find_package(rclcpp_action REQUIRED)
+
+# find_package(locobot_interfaces REQUIRED)
+find_package(moveit_ros_planning_interface REQUIRED)
 
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -55,12 +59,14 @@ install(TARGETS my_node
 
 
 add_executable(visual_block_perception_srv src/visual_block_perception_srv.cpp)
-ament_target_dependencies(visual_block_perception_srv rclcpp Eigen geometry_msgs tf2_eigen tf2_ros tf2 tf2_geometry_msgs OpenCV image_transport cv_bridge image_geometry visualization_msgs std_msgs la_msgs)
+ament_target_dependencies(visual_block_perception_srv rclcpp rclcpp_action geometry_msgs tf2_eigen tf2_ros tf2 tf2_geometry_msgs OpenCV image_transport cv_bridge image_geometry visualization_msgs std_msgs la_msgs)
 
-
+add_executable(move_arm_action_srv src/move_arm_action_srv.cpp)
+ament_target_dependencies(move_arm_action_srv rclcpp rclcpp_action la_msgs moveit_ros_planning_interface tf2 tf2_geometry_msgs)
 
 install(TARGETS 
   visual_block_perception_srv
+  move_arm_action_srv
   DESTINATION lib/${PROJECT_NAME})
 
 
