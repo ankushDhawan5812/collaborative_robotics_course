@@ -69,11 +69,6 @@ install(TARGETS
   move_arm_action_srv
   DESTINATION lib/${PROJECT_NAME})
 
-
-
-
-
-
 ament_python_install_package(${PROJECT_NAME})
 
 # Install Python executables
@@ -86,6 +81,9 @@ install(PROGRAMS
   locobot_autonomy/odom_subscriber.py
   locobot_autonomy/cube_locator.py
   locobot_autonomy/move_base_client.py
+  locobot_autonomy/cube_locator_client.py
+  locobot_autonomy/gripper_control.py
+  locobot_autonomy/move_gripper_action_server.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -99,6 +97,7 @@ install(DIRECTORY
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/MoveBase.action"
   "action/MoveArm.action"
+  "action/MoveGripper.action"
   DEPENDENCIES geometry_msgs std_msgs
  )
 
