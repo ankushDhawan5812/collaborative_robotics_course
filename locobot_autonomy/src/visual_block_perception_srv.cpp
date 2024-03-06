@@ -82,10 +82,11 @@ public:
   std::vector<geometry_msgs::msg::Point> blob_locator(std::shared_ptr<cv::Mat> & color_image_canvas_ptr,  
                                                       std::shared_ptr<cv::Mat> & mask_ptr);
 
-std::vector<geometry_msgs::msg::PointStamped> register_rgb_pix_to_depth_pts(const cv_bridge::CvImageConstPtr cv_ptr,
+  std::vector<geometry_msgs::msg::PointStamped> register_rgb_pix_to_depth_pts(const cv_bridge::CvImageConstPtr cv_ptr,
                                                                           std_msgs::msg::Header msg_header, 
                                                                           const std::shared_ptr<std::vector<geometry_msgs::msg::Point>> &uv_pix_list_ptr);
 
+  // geometry_msgs::msg::PointStamped transform_point(geomtry_msgs::msg::PointStamped point_in, std::string desired_frame);
 
 
 
@@ -128,11 +129,11 @@ std::vector<geometry_msgs::msg::PointStamped> register_rgb_pix_to_depth_pts(cons
   std::vector<geometry_msgs::msg::Point> yellow_uv_pix_list_;
   std::vector<geometry_msgs::msg::Point> green_uv_pix_list_;
 
-  std::string color_image_topic_; // this string is over-written by the service request
-  std::string depth_image_topic_; // this string is over-written by the service request
-  std::string depth_img_camera_info_; // this string is over-written by the service request
-  std::string registered_pt_cld_topic_; // this string is over-written by the service request
-  
+  std::string color_image_topic_; // topic for the color image
+  std::string depth_image_topic_; // topic for the depth image
+  std::string depth_img_camera_info_; // topic for the camera info
+  std::string registered_pt_cld_topic_; // topic for the point cloud
+  std::string desired_block_frame_; // what desired frame the blocks poses are expressed in
   
   image_geometry::PinholeCameraModel camera_model_; //Camera model, will help us with projecting the ray through the depth image
   bool depth_cam_info_ready_; //This will help us ensure we don't ask for a variable before its ready
@@ -152,8 +153,6 @@ Matching_Pix_to_Ptcld::Matching_Pix_to_Ptcld()
   
   //Class constructor
   //this is how to setup the TF buffer in a class:
-  //tf_listener_.reset(new tf2_ros::TransformListener(tf_buffer_));
-
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
@@ -175,6 +174,9 @@ Matching_Pix_to_Ptcld::Matching_Pix_to_Ptcld()
 
   std::string registered_pt_cld_topic_;
   this->get_parameter("pt_srv_reg_pt_cld_topic", registered_pt_cld_topic_);
+
+  std::string desired_block_frame_;
+  this->get_parameter("locobot/base_link", desired_block_frame_); //set the desired frame for the blocks to be expressed in the camera frame (default)
 
   //message reliability
   qos_.reliability(rclcpp::ReliabilityPolicy::BestEffort);
@@ -204,8 +206,7 @@ Matching_Pix_to_Ptcld::Matching_Pix_to_Ptcld()
 
 
 void Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen(){
-  //TODO: turn this into a marker array, access based on cube presence
-
+// This function will generate a marker array of spheres to represent the 3D location of the blocks in the camera frame
   bool one_block_present = true;
 
   visualization_msgs::msg::MarkerArray marker_array;
@@ -326,7 +327,7 @@ void Matching_Pix_to_Ptcld::camera_cube_locator_marker_gen(){
 
 void Matching_Pix_to_Ptcld::info_callback(const std::shared_ptr<sensor_msgs::msg::CameraInfo> msg){
   //create a camera model from the camera info
-  // RCLCPP_INFO(rclcpp::get_logger("rclcpp"),"in InfoCallback");
+
   camera_model_.fromCameraInfo(msg);
   depth_cam_info_ready_ = true; 
 }
@@ -336,20 +337,18 @@ std::vector<geometry_msgs::msg::PointStamped> Matching_Pix_to_Ptcld::register_rg
                                                           std_msgs::msg::Header msg_header, 
                                                           const std::shared_ptr<std::vector<geometry_msgs::msg::Point>> &uv_pix_list_ptr){
   
+  // This function will take in the depth image and the list of pixel points and return the 3D points of the center of the blocks in the camera frame
+
   //generate the depth image as a cv Mat object
   cv::Mat depth_image = cv_ptr->image;
-
-  // RCLCPP_INFO(rclcpp::get_logger("rclcpp"),"in register_rgb_pix_to_depth_pts, length of uv_pix_list_ptr is: %d",uv_pix_list_ptr->size());
-
 
   std::vector<geometry_msgs::msg::PointStamped> general_3d_cloud;
 
   //Iterate through each point for this given color
   for (const auto& uv_pix : *uv_pix_list_ptr ){
 
-    // RCLCPP_INFO(rclcpp::get_logger("rclcpp"),"in for loop, value is: %f",uv_pix.x);
-
-    float depth_value = depth_image.at<float>(uv_pix.x,uv_pix.y);  // access the depth value of the desired pixel
+    float depth_value = depth_image.at<float>(uv_pix.y,uv_pix.x);  // access the depth value of the desired pixel " If matrix is of type CV_32F then use Mat.at<float>(y,x)."
+    
     //If the pixel that was chosen has non-zero depth, then find the point projected along the ray at that depth value
     
     geometry_msgs::msg::PointStamped point_3d_from_ptcld;
@@ -363,39 +362,46 @@ std::vector<geometry_msgs::msg::PointStamped> Matching_Pix_to_Ptcld::register_rg
       {
         //Pixel has depth, now we need to find the corresponding point in the pointcloud
         //Use the camera model to get the 3D ray for the current pixel
-        cv::Point2d pixel(uv_pix.y, uv_pix.x);
+        cv::Point2d pixel(uv_pix.x, uv_pix.y); // "Returns:3d ray passing through (u,v)"
+        
         cv::Point3d ray = camera_model_.projectPixelTo3dRay(pixel);
         //Calculate the 3D point on the ray using the depth value
         cv::Point3d point_3d = ray*depth_value;   
         geometry_msgs::msg::PointStamped point_3d_geom_msg; 
         point_3d_geom_msg.header = msg_header;
+
+        std::string point_frame_id;
+        if (desired_block_frame_.empty()) {
+          point_frame_id = "locobot/base_link"; // service has not populated this variable yet, so use the base link frame
+        } else {
+          point_frame_id = desired_block_frame_; // Service has requested a specific frame
+        }
+        // point_3d_geom_msg.header.frame_id = point_frame_id;
         point_3d_geom_msg.point.x = point_3d.x;
         point_3d_geom_msg.point.y = point_3d.y;
         point_3d_geom_msg.point.z = point_3d.z;
         //Transform the point to the pointcloud frame using tf
-        std::string point_cloud_frame = camera_model_.tfFrame();
+        std::string point_cloud_frame = "locobot/camera_depth_link";// This needed to be fixed, camera model frame was incorrect for depth. camera_model_.tfFrame();
         // Get the camera pose in the desired reference frame
         geometry_msgs::msg::TransformStamped transform;
         try {
             transform = tf_buffer_->lookupTransform(
-              point_cloud_frame, msg_header.frame_id,
+               point_frame_id, point_cloud_frame,
               tf2::TimePointZero);
-
-            // transform = tf_buffer_.lookupTransform(point_cloud_frame, msg->header.frame_id, ros::Time(0));
         } catch (const tf2::TransformException & ex) {
             RCLCPP_INFO(
               this->get_logger(), "Could not transform %s to %s: %s",
-              point_cloud_frame.c_str(), msg_header.frame_id.c_str(), ex.what());
+               point_frame_id.c_str(), point_cloud_frame.c_str(), ex.what());
             return general_3d_cloud;
           }
         // Transform a point cloud point
         tf2::doTransform(point_3d_geom_msg, point_3d_from_ptcld, transform); // syntax: (points_in, points_out, transform)
         //Put this point into the list of pointstamps:
+        point_3d_from_ptcld.header.frame_id = point_frame_id;
         general_3d_cloud.push_back(point_3d_from_ptcld);
       }
     }
   }
-  // RCLCPP_INFO(rclcpp::get_logger("rclcpp"),"in register_rgb_pix_to_depth_pts, length of general_3d_cloud_ptr is: %d",general_3d_cloud.size());
   return general_3d_cloud;
 }
 
@@ -415,7 +421,6 @@ void Matching_Pix_to_Ptcld::depth_callback(const sensor_msgs::msg::Image &msg){
     return;
   }
 
-  // RCLCPP_INFO(rclcpp::get_logger("rclcpp"),"in depth callback");
   //reset list of block center point list variables
   red_3d_cloud_.clear(); 
   blue_3d_cloud_.clear(); 
@@ -450,6 +455,7 @@ void Matching_Pix_to_Ptcld::depth_callback(const sensor_msgs::msg::Image &msg){
 }
 
 bool Matching_Pix_to_Ptcld::blocks_of_specific_color_present(const std::shared_ptr<cv::Mat> mask_img){
+  // This function will take in a mask image and return a boolean value indicating if any blocks of a given color are present in the image
   // Determine if any pixel is not black/null [0,0,0]
   bool block_color_present = false;
   for(int i = 0; i < mask_img->rows; i++)
@@ -468,8 +474,9 @@ bool Matching_Pix_to_Ptcld::blocks_of_specific_color_present(const std::shared_p
 
 
 std::vector<geometry_msgs::msg::Point> Matching_Pix_to_Ptcld::blob_locator(std::shared_ptr<cv::Mat> & color_image_canvas_ptr,  std::shared_ptr<cv::Mat> & mask_ptr){
+  // This function will take in a mask image and return a list of the pixel (uv) points of the center of the blobs in the image
+  
   // Find blobs and populate the uv_list:
-
   //Find countours
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(*mask_ptr, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
@@ -498,6 +505,7 @@ std::vector<geometry_msgs::msg::Point> Matching_Pix_to_Ptcld::blob_locator(std::
 
 
 void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::msg::Image & msg){
+  // This function will take in a color image and return a list of the pixel (uv) points of the center of the blobs in the image
   //convert sensor_msgs image to opencv image : http://wiki.ros.org/cv_bridge/Tutorials/UsingCvBridgeToConvertBetweenROSImagesAndOpenCVImages
 
   cv_bridge::CvImagePtr color_img_ptr;
@@ -614,8 +622,15 @@ void Matching_Pix_to_Ptcld::color_image_callback(const sensor_msgs::msg::Image &
   
 
 void Matching_Pix_to_Ptcld::service_callback(const std::shared_ptr<la_msgs::srv::Ptps::Request> req, std::shared_ptr<la_msgs::srv::Ptps::Response> res){
+  // This is the service callback, when requested, it will return the 3D points of the center of the blocks of each color present in the image and booleans for the presence of each color
   // the topic for the rgb_img should be set as a rosparam when the file is launched (this can be done in the launch file, it is not done here since the subscriber is started with the class object instantiation)
 
+  //Set the desired frame for the blocks to be expressed in:
+  desired_block_frame_ = req->desired_frame;
+
+
+
+  //send the response back to the client
   res->red_present = red_blocks_present_;
   res->red_points = red_3d_cloud_; //.push_back(point_3d_cloud_); //send the point back as a response  
 
@@ -632,14 +647,11 @@ void Matching_Pix_to_Ptcld::service_callback(const std::shared_ptr<la_msgs::srv:
 
 
 
-// int main(int argc, char * argv[])
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
-  // RCLCPP_INFO(rclcpp::get_logger("rclcpp"),"basic node start");
   auto node = std::make_shared<Matching_Pix_to_Ptcld>();
   rclcpp::spin(node);
-  // rclcpp::spin(std::make_shared<Matching_Pix_to_Ptcld>());
   rclcpp::shutdown();
   return 0;
 }
