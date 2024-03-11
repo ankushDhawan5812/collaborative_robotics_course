@@ -8,6 +8,7 @@ from geometry_msgs.msg import Pose
 from locobot_autonomy.action import MoveBase, MoveArm, MoveGripper
 from locobot_autonomy.move_base_client import MoveBaseClient
 from locobot_autonomy.move_arm_client import MoveArmActionClient
+from locobot_autonomy.move_gripper_client import MoveGripperActionClient
 
 import time
 
@@ -20,6 +21,7 @@ class LoCoBotPickPlace(Node):
         self.camera_client = self.move_base_client.point_cli # send cube points
         self.base_client = self.move_base_client.base_cli # move base
         self.move_arm_client = MoveArmActionClient() # move arm
+        self.move_gripper_client = MoveGripperActionClient()
         # self.move_arm_and_grip_gripper_client = ActionClient(self, MoveGripper, 'operate_gripper') # move gripper
 
         self.start_detection()
@@ -37,14 +39,25 @@ class LoCoBotPickPlace(Node):
         self.move_base_client.get_logger().info(
             f'Result of pix_to_point_cpp for desired_frame {desired_frame}: {red_point}')
         
-        #Send the target_point to the move base function
+        # Move the gripper to the goal
+        gripper_state = "open"
+        self.move_gripper(gripper_state)
         self.move_base_to_block(red_point)
-        self.move_arm_to_block()
+        arm_pickup_pose = [0.44, 0, 0, 0, 90, 0]
+        self.move_arm(arm_pickup_pose)
 
-    def move_arm_to_block(self):
+    def move_base_to_block(self, position):
+        self.get_logger().info("Moving base to the block")
+        self.move_base_client.send_goal(position)
+
+    def move_arm(self, arm_pose):
         # Sequence to move the arm above the block, grip it, and lift
-        arm_block_pose = [0.44, 0, 0, 0, 90, 0]
-        self.move_arm_client.send_goal(arm_block_pose)
+        self.get_logger().info("Moving arm to the block")
+        self.move_arm_client.send_goal(arm_pose)
+    
+    def move_gripper(self, gripper_state):
+        self.get_logger().info(f"Gripper Action: {gripper_state}")
+        self.move_gripper_client.send_goal(gripper_state)
         
 
     # def detect_feedback_callback(self, feedback_msg):
@@ -57,57 +70,44 @@ class LoCoBotPickPlace(Node):
     #         self.get_logger().info('Block detected, moving towards it...')
     #         self.move_base_to_block(result.position)
 
-    def move_base_to_block(self, position):
-
-        self.move_base_client.send_goal(position)
-        
 
 
+    # def move_base_feedback_callback(self, feedback_msg):
+    #     # # Process feedback from base movement, if applicable
+    #     # pass
 
+    # def move_arm_and_grip(self):
+    #     # Sequence to move the arm above the block, grip it, and lift
+    #     arm_pose = [0.44, 0, 0, 0, 90, 0]
+    #     self.move_arm_client.wait_for_server()
+    #     arm_goal = MoveArm.Goal(pose=arm_pose)
+    #     self.move_arm_client.send_goal_async(arm_goal, feedback_callback=self.move_arm_feedback_callback)
 
-    def move_base_feedback_callback(self, feedback_msg):
-        # Process feedback from base movement, if applicable
-        pass
+    # def move_arm_feedback_callback(self, feedback_msg):
+    #     # Process feedback from arm movement, if applicable
+    #     pass
 
-    def move_arm_and_grip(self):
-        # Sequence to move the arm above the block, grip it, and lift
+    # def operate_gripper(self, action):
+    #     # Sequence to operate the gripper
+    #     pass
+    #     gripper_goal = OperateGripper.Goal(action=action)
+    #     self.operate_gripper_client.wait_for_server()
+    #     self.operate_gripper_client.send_goal_async(gripper_goal, feedback_callback=self.gripper_feedback_callback)
 
-        
-        
-        arm_pose = [0.44, 0, 0, 0, 90, 0]
-        self.move_arm_client.wait_for_server()
-        arm_goal = MoveArm.Goal(pose=arm_pose)
-        self.move_arm_client.send_goal_async(arm_goal, feedback_callback=self.move_arm_feedback_callback)
+    # def gripper_feedback_callback(self, feedback_msg):
+    #     # Process feedback from gripper operation, if applicable
+    #     pass
 
-    def move_arm_feedback_callback(self, feedback_msg):
-        # Process feedback from arm movement, if applicable
-        pass
-
-    def operate_gripper(self, action):
-        # Sequence to operate the gripper
-        pass
-        gripper_goal = OperateGripper.Goal(action=action)
-        self.operate_gripper_client.wait_for_server()
-        self.operate_gripper_client.send_goal_async(gripper_goal, feedback_callback=self.gripper_feedback_callback)
-
-    def gripper_feedback_callback(self, feedback_msg):
-        # Process feedback from gripper operation, if applicable
-        pass
-
-    def place_block(self):
-        # Sequence to place the block at the target location
-        pass
+    # def place_block(self):
+    #     # Sequence to place the block at the target location
+    #     pass
 
 def main(args=None):
     rclpy.init(args=args)
     node = LoCoBotPickPlace()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
