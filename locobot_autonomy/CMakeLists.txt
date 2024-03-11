@@ -84,6 +84,9 @@ install(PROGRAMS
   locobot_autonomy/cube_locator_client.py
   locobot_autonomy/gripper_control.py
   locobot_autonomy/move_gripper_action_server.py
+  locobot_autonomy/run_pick_and_place.py
+  locobot_autonomy/move_arm_client.py
+  locobot_autonomy/move_gripper_client.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

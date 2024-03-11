@@ -35,14 +35,17 @@ class MoveBaseClient(Node):
 
     def send_goal(self, point):
         goal_msg = MoveBase.Goal()
-        goal_msg.target_pose.position.x = (0.8* point.x)
-        goal_msg.target_pose.position.y = (0.8 * point.y)
-        goal_msg.target_pose.position.z = 0.0
+        goal_msg.target_pose.position.x = (point.x)
+        goal_msg.target_pose.position.y = (point.y)
+        goal_msg.target_pose.position.z = 0.5
         goal_msg.target_pose.orientation.x = 0.0
         goal_msg.target_pose.orientation.y = 0.0
         goal_msg.target_pose.orientation.z = 0.0
         goal_msg.target_pose.orientation.w = 1.0
 
+        #Set angle to true always
+        goal_msg.control_base_angle_bool = True
+        
         self.base_cli.wait_for_server()
         self.send_goal_future = self.base_cli.send_goal_async(goal_msg)
         self.send_goal_future.add_done_callback(self.goal_response_callback)
@@ -76,7 +79,7 @@ def main(args=None):
     if len(sys.argv) > 1:
         desired_frame = sys.argv[1]
     else:
-        desired_frame = 'locobot/gripper_link'  # Default value if not provided via command line
+        desired_frame = 'locobot/base_link'  # Default value if not provided via command line
     response = move_base_client.send_request(desired_frame)
 
     red_point = response.red_points[0].point
@@ -91,5 +94,5 @@ def main(args=None):
     move_base_client.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
