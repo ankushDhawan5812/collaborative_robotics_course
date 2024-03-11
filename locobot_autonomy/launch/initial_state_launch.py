@@ -18,7 +18,7 @@ def generate_launch_description():
     # ))
 
     # Launch moveit launch file
-    launch_file2 = os.path.join(os.path.dirname(__file__), '/home/ankushdhawan/interbotix_ws/src/interbotix_ros_rovers/interbotix_ros_xslocobots/interbotix_xslocobot_moveit/launch/xslocobot_moveit.launch.py')
+    launch_file2 = os.path.join(os.path.dirname(__file__), '/home/adityadutt09/interbotix_ws/src/interbotix_ros_rovers/interbotix_ros_xslocobots/interbotix_xslocobot_moveit/launch/xslocobot_moveit.launch.py')
     ld.add_action(IncludeLaunchDescription(
         PythonLaunchDescriptionSource(launch_file2),
         #launch_arguments={'robot_model': 'locobot_wx250s', 'use_sim_time': 'true', 'hardware_type': 'gz_classic', 'use_lidar': 'true'}.items()

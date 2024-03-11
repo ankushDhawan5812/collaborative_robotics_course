@@ -24,27 +24,26 @@ class LoCoBotPickPlace(Node):
         self.move_gripper_client = MoveGripperActionClient()
         # self.move_arm_and_grip_gripper_client = ActionClient(self, MoveGripper, 'operate_gripper') # move gripper
 
-        self.start_detection()
+        # self.start_detection()
 
-    def start_detection(self):
+    def start_detection(self, desired_frame):
         self.get_logger().info('Starting block detection...')
         # goal = DetectBlock.Goal()
         # self.detect_block_client.wait_for_server()
         # self.detect_block_client.send_goal_async(goal, feedback_callback=self.detect_feedback_callback)
-        desired_frame = 'locobot/gripper_link'
         response = self.move_base_client.send_request(desired_frame)
 
         #Choose which block to detect here. For now, lets default to the first red-point
-        red_point = response.red_points[0].point
+        self.red_point = response.red_points[0].point
         self.move_base_client.get_logger().info(
-            f'Result of pix_to_point_cpp for desired_frame {desired_frame}: {red_point}')
+            f'Result of pix_to_point_cpp for desired_frame {desired_frame}: {self.red_point}')
         
         # Move the gripper to the goal
-        gripper_state = "open"
-        self.move_gripper(gripper_state)
-        self.move_base_to_block(red_point)
-        arm_pickup_pose = [0.44, 0, 0, 0, 90, 0]
-        self.move_arm(arm_pickup_pose)
+        # gripper_state = "open"
+        # self.move_gripper(gripper_state)
+        # self.move_base_to_block(red_point)
+        # arm_pickup_pose = [0.44, 0, 0, 0, 90, 0]
+        # self.move_arm(arm_pickup_pose)
 
     def move_base_to_block(self, position):
         self.get_logger().info("Moving base to the block")
@@ -105,6 +104,43 @@ class LoCoBotPickPlace(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = LoCoBotPickPlace()
+
+    # Call each task sequentially using spin_once loop
+    while rclpy.ok():
+        # Perform task 1
+        desired_frame = 'locobot/gripper_link'
+        node.start_detection(desired_frame)
+
+        # Spin once to handle ROS events
+        rclpy.spin_once(node)
+
+        # Perform task 2
+        node.move_gripper("open")
+
+        # Spin once to handle ROS events
+        rclpy.spin_once(node)
+
+        # Perform task 3
+        node.move_base_to_block(node.red_point)
+
+        # Spin once to handle ROS events
+        rclpy.spin_once(node)
+
+        node.move_arm([0.44, 0, 0, 0, 90, 0])
+
+        rclpy.spin_once(node)
+        
+        # Perform task 2
+        node.move_gripper("close")
+
+        # Spin once to handle ROS events
+        rclpy.spin_once(node)
+
+    # Clean up resources
+    node.destroy_node()
+    rclpy.shutdown()
+
+    node.start_detection()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

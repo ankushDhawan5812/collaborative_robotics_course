@@ -35,9 +35,9 @@ class MoveBaseClient(Node):
 
     def send_goal(self, point):
         goal_msg = MoveBase.Goal()
-        goal_msg.target_pose.position.x = (point.x)
-        goal_msg.target_pose.position.y = (point.y)
-        goal_msg.target_pose.position.z = 0.5
+        goal_msg.target_pose.position.x = (point.x) - 0.01
+        goal_msg.target_pose.position.y = (point.y) - 0.01
+        goal_msg.target_pose.position.z = 0.48
         goal_msg.target_pose.orientation.x = 0.0
         goal_msg.target_pose.orientation.y = 0.0
         goal_msg.target_pose.orientation.z = 0.0
