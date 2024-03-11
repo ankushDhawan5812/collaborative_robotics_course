@@ -140,10 +140,5 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()
 
-    node.start_detection()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
-
 if __name__ == '__main__':
     main()
