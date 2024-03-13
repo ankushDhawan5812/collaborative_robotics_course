@@ -37,17 +37,23 @@ class LoCoBotPickPlace(Node):
         self.red_point = response.red_points[0].point
         self.move_base_client.get_logger().info(
             f'Result of pix_to_point_cpp for desired_frame {desired_frame}: {self.red_point}')
-        
-        # Move the gripper to the goal
-        # gripper_state = "open"
-        # self.move_gripper(gripper_state)
-        # self.move_base_to_block(red_point)
-        # arm_pickup_pose = [0.44, 0, 0, 0, 90, 0]
-        # self.move_arm(arm_pickup_pose)
 
-    def move_base_to_block(self, position):
+    def move_base_to_block(self, pose):
         self.get_logger().info("Moving base to the block")
-        self.move_base_client.send_goal(position)
+
+        # detect the block here as well
+        self.move_base_client.get_logger().info('Sleeping...')
+        time.sleep(5)
+
+        # Goal 1
+        self.move_base_client.base_action_complete = False
+        self.move_base_client.send_goal(pose) # takes in a pose
+        # moves until the base reaches the goal
+        while self.move_base_client.base_action_complete is None or self.move_base_client.base_action_complete is False:
+            rclpy.spin_once(self.move_base_client) # action will stop spinning once the action is completed
+            self.move_base_client.get_logger().info('Waiting for base action to complete...')
+        self.move_base_client.get_logger().info('Base action complete...')
+        self.move_base_client.base_action_complete = False
 
     def move_arm(self, arm_pose):
         # Sequence to move the arm above the block, grip it, and lift
@@ -68,9 +74,22 @@ def main(args=None):
     pickplace = LoCoBotPickPlace()
 
     # Test the gripper
-    pickplace.move_gripper("close") # gripper action should fully complete because of while loop in move_gripper()
+    #pickplace.move_gripper("close") # gripper action should fully complete because of while loop in move_gripper()
     pickplace.move_gripper("close")
     pickplace.move_gripper("open") # gripper action should fully complete because of while loop in move_gripper()
+
+    # Test the base
+    pose = Pose()
+    pose.position.x = 1.6
+    pose.position.y = 0.0
+    pose.position.z = 0.0
+    pose.orientation.x = 0.0
+    pose.orientation.y = 0.0
+    pose.orientation.z = 0.0
+    pose.orientation.w = 1.0
+    pickplace.move_base_to_block(pose)
+
+    pickplace.move_gripper("close")
 
     # Clean up resources
     pickplace.destroy_node()

@@ -39,10 +39,10 @@ class MoveBaseClient(Node):
         goal_msg.target_pose.position.x = (point.position.x) - 0.01
         goal_msg.target_pose.position.y = (point.position.y) - 0.01
         goal_msg.target_pose.position.z = 0.48
-        goal_msg.target_pose.orientation.x = 0.0
-        goal_msg.target_pose.orientation.y = 0.0
-        goal_msg.target_pose.orientation.z = 0.0
-        goal_msg.target_pose.orientation.w = 1.0
+        goal_msg.target_pose.orientation.x = point.orientation.x
+        goal_msg.target_pose.orientation.y = point.orientation.y
+        goal_msg.target_pose.orientation.z = point.orientation.z
+        goal_msg.target_pose.orientation.w = point.orientation.w
 
         #Set angle to true always
         goal_msg.control_base_angle_bool = True
@@ -94,6 +94,10 @@ def main(args=None):
     red_point.position.x = 0.5
     red_point.position.y = 0.0
     red_point.position.z = 0.0
+    red_point.orientation.x = 0.0
+    red_point.orientation.y = 0.0
+    red_point.orientation.z = 0.0
+    red_point.orientation.w = 1.0
     
     move_base_client.get_logger().info(
         f'Result of pix_to_point_cpp for desired_frame {desired_frame}: {red_point}')
@@ -103,7 +107,7 @@ def main(args=None):
 
     # Goal 1
     move_base_client.base_action_complete = False
-    move_base_client.send_goal(red_point)
+    move_base_client.send_goal(red_point) # takes in a pose
     # moves until the base reaches the goal
     while move_base_client.base_action_complete is None or move_base_client.base_action_complete is False:
         rclpy.spin_once(move_base_client) # action will stop spinning once the action is completed

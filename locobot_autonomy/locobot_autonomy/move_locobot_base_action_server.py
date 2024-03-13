@@ -153,14 +153,14 @@ class MoveBaseActionServer(Node):
             self.get_logger().info('Angle Goal Reached')
             result.done = True
             goal_handle.succeed()
-        elif (SharedData.control_base_angle_bool_global==False) and (distance_to_goal < SharedData.goal_stopping_distance) and (SharedData.locobot_node_program_stops == False):
+        elif (SharedData.control_base_angle_bool_global==False) and (distance_to_goal < SharedData.goal_stopping_distance) and (SharedData.locobot_node_program_stops == True):
             #the goal_stopping_distance is used to determine if the robot is close enough to the goal to stop the action server, 
             self.get_logger().info('Distance Goal Reached')
             result.done = True
             goal_handle.succeed()
         else:
             result.done = False
-
+        goal_handle.abort()
         return result
 
 
