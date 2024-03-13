@@ -9,9 +9,10 @@ class MoveGripperActionClient(Node):
     def __init__(self):
         super().__init__('gripper_action_client')
         self.client = ActionClient(self, MoveGripper, 'movegripper')
-        self.action_complete = False
+        self.action_complete = None
 
     def send_goal(self, command):
+        self.action_complete = False # when we send the goal, the action is not yet complete
         goal_msg = MoveGripper.Goal(command=command)
         self.client.wait_for_server()
 
@@ -31,21 +32,28 @@ class MoveGripperActionClient(Node):
 
     def get_result_callback(self, future):
         result = future.result().result
-        if result.success:
-            self.get_logger().info('Action completed successfully')
+        if result.done:
+            self.action_complete = True
+            self.get_logger().info('Action completed')
         else:
+            self.action_complete = False
             self.get_logger().info('Action failed')
 
 def main(args=None):
     rclpy.init(args=args)
     gripper_client = MoveGripperActionClient()
-    command = 'close'  # or 'open', based on the desired action
+    command = 'open'  # or 'open', based on the desired action
 
     gripper_client.send_goal(command)
 
-    rclpy.spin(gripper_client)
-    gripper_client.get_logger().info('Interrupted by user, shutting down...')
-    gripper_client.destroy_node()
+    while gripper_client.action_complete is None or gripper_client.action_complete is False:
+        rclpy.spin_once(gripper_client) # action will stop spinning once the action is completed
+        gripper_client.get_logger().info('Waiting for action to complete...')
+    gripper_client.get_logger().info('Action complete...')
+
+    # rclpy.spin(gripper_client)
+    # gripper_client.get_logger().info('Interrupted by user, shutting down...')
+    # gripper_client.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':

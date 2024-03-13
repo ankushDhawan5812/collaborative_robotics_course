@@ -32,14 +32,14 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(launch_file3)
     ))
 
-    # Launching move base action server
-    ld.add_action(Node(
-        package='locobot_autonomy',
-        executable='move_locobot_base_action_server.py',
-        name='movebase_action_server',
-        output='screen',
-        #parameters=[{'param_name': 'param_value'}]  # Optional parameters
-    ))
+    # # Launching move base action server
+    # ld.add_action(Node(
+    #     package='locobot_autonomy',
+    #     executable='move_locobot_base_action_server.py',
+    #     name='movebase_action_server',
+    #     output='screen',
+    #     #parameters=[{'param_name': 'param_value'}]  # Optional parameters
+    # ))
 
     # Launching perception service
     ld.add_action(Node(

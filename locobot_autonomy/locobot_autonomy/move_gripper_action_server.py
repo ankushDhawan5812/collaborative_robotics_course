@@ -42,12 +42,12 @@ class LocobotGrip(Node):
         self.actual_positions[1] = msg.actual.positions[1]
 
     def set_error(self, positions_desired):
-        self.get_logger().info("Setting error")
-        self.get_logger().info(f"Desired {positions_desired}")
-        self.get_logger().info(f"Actual {self.actual_positions}")
+        #self.get_logger().info("Setting error")
+        #self.get_logger().info(f"Desired {positions_desired}")
+        # self.get_logger().info(f"Actual {self.actual_positions}")
         current_positions = self.actual_positions
         self.error = ((positions_desired[0] - current_positions[0]) ** 2 + (positions_desired[1] - current_positions[1]) ** 2) ** 0.5
-        self.get_logger().info(f"Error {self.error}")
+        #self.get_logger().info(f"Error {self.error}")
         return self.error
 
     def execute_callback(self, goal_handle):
@@ -61,23 +61,21 @@ class LocobotGrip(Node):
 
         while self.error is None or self.error > 0.005:
             self.get_logger().info(f"Error {self.error}")
-            if time.time() - self.start_time > self.loop_timeout: # action shoudl not take more than 5 seconds to complete
+            if time.time() - self.start_time > self.loop_timeout: # action shoudl not take more than 10 seconds to complete
                 self.get_logger().info("Timeout")
                 result = MoveGripper.Result()
-                result.done = False
+                result.done = True
                 goal_handle.abort()
                 return result
             elif goal.command.lower() == "open":
                 self.get_logger().info("Opening...")
                 self.gripper_state = "open"
                 self.publish_gripper_action(self.open_positions)
-                self.get_logger().info(f"publishing {self.open_positions}")
                 self.set_error([0.0145, -0.015])
             elif goal.command.lower() == "close":
                 self.get_logger().info("Closing...")
                 self.gripper_state = "close"
                 self.publish_gripper_action(self.close_positions)
-                self.get_logger().info(f"publishing {self.close_positions}")
                 self.set_error([0.037, -0.037])
             else:
                 self.get_logger().info(f"Invalid command: {goal.command}")

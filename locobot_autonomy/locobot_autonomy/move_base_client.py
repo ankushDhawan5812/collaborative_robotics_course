@@ -24,6 +24,7 @@ class MoveBaseClient(Node):
         while not self.point_cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Service not available, waiting again...')
         self.req = Ptps.Request()
+        self.base_action_complete = None
     
     def send_request(self, desired_frame):
         self.req.desired_frame = desired_frame  # Set the desired frame in the request
@@ -32,11 +33,11 @@ class MoveBaseClient(Node):
         return self.future.result()
 
 
-
     def send_goal(self, point):
+        self.base_action_complete = False
         goal_msg = MoveBase.Goal()
-        goal_msg.target_pose.position.x = (point.x) - 0.01
-        goal_msg.target_pose.position.y = (point.y) - 0.01
+        goal_msg.target_pose.position.x = (point.position.x) - 0.01
+        goal_msg.target_pose.position.y = (point.position.y) - 0.01
         goal_msg.target_pose.position.z = 0.48
         goal_msg.target_pose.orientation.x = 0.0
         goal_msg.target_pose.orientation.y = 0.0
@@ -63,6 +64,12 @@ class MoveBaseClient(Node):
 
     def get_result_callback(self, future):
         result = future.result().result
+        if result.done:
+            self.base_action_complete = True
+            self.get_logger().info('Action completed')
+        else:
+            self.base_action_complete = False
+            self.get_logger().info('Action failed')
         self.get_logger().info('Result: {}'.format(result))
 
     def cube_locator_callback(self, msg):
@@ -74,7 +81,6 @@ class MoveBaseClient(Node):
 def main(args=None):
     rclpy.init(args=args)
     move_base_client = MoveBaseClient()
-    #move_base_client.send_goal(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     if len(sys.argv) > 1:
         desired_frame = sys.argv[1]
@@ -82,17 +88,47 @@ def main(args=None):
         desired_frame = 'locobot/base_link'  # Default value if not provided via command line
     response = move_base_client.send_request(desired_frame)
 
-    red_point = response.red_points[0].point
+    # red_point = response.red_points[0].point
+
+    red_point = Pose()
+    red_point.position.x = 0.5
+    red_point.position.y = 0.0
+    red_point.position.z = 0.0
+    
     move_base_client.get_logger().info(
         f'Result of pix_to_point_cpp for desired_frame {desired_frame}: {red_point}')
 
     move_base_client.get_logger().info('Sleeping...')
     time.sleep(5)
-    move_base_client.send_goal(red_point)
 
-    rclpy.spin(move_base_client)
-    move_base_client.destroy_node()
+    # Goal 1
+    move_base_client.base_action_complete = False
+    move_base_client.send_goal(red_point)
+    # moves until the base reaches the goal
+    while move_base_client.base_action_complete is None or move_base_client.base_action_complete is False:
+        rclpy.spin_once(move_base_client) # action will stop spinning once the action is completed
+        move_base_client.get_logger().info('Waiting for base action to complete...')
+    move_base_client.get_logger().info('Base action complete...')
+    move_base_client.base_action_complete = False
+
+    move_base_client.get_logger().info('Sleeping...')
+    time.sleep(5)
+
+    red_point.position.x = 0.0
+    red_point.position.y = 0.0
+    red_point.position.z = 0.0
+
+    # Goal 2
+    move_base_client.send_goal(red_point)
+    while move_base_client.base_action_complete is None or move_base_client.base_action_complete is False:
+        rclpy.spin_once(move_base_client) # action will stop spinning once the action is completed
+        move_base_client.get_logger().info('Waiting for base action to complete...')
+    move_base_client.get_logger().info('Base action complete...')
+    move_base_client.base_action_complete = False
+
+    # rclpy.spin(move_base_client)
+    #move_base_client.destroy_node()
     rclpy.shutdown()
 
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()

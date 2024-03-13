@@ -57,87 +57,23 @@ class LoCoBotPickPlace(Node):
     def move_gripper(self, gripper_state):
         self.get_logger().info(f"Gripper Action: {gripper_state}")
         self.move_gripper_client.send_goal(gripper_state)
+        while self.move_gripper_client.action_complete is None or self.move_gripper_client.action_complete is False:
+            rclpy.spin_once(self.move_gripper_client)
+            self.get_logger().info('Gripper action not complete...')
+        self.get_logger().info('Gripper action complete...')
         
-
-    # def detect_feedback_callback(self, feedback_msg):
-    #     # Process feedback from block detection, if applicable
-    #     pass
-
-    # def detect_block_result_callback(self, future):
-    #     result = future.result().result
-    #     if result.success:
-    #         self.get_logger().info('Block detected, moving towards it...')
-    #         self.move_base_to_block(result.position)
-
-
-
-    # def move_base_feedback_callback(self, feedback_msg):
-    #     # # Process feedback from base movement, if applicable
-    #     # pass
-
-    # def move_arm_and_grip(self):
-    #     # Sequence to move the arm above the block, grip it, and lift
-    #     arm_pose = [0.44, 0, 0, 0, 90, 0]
-    #     self.move_arm_client.wait_for_server()
-    #     arm_goal = MoveArm.Goal(pose=arm_pose)
-    #     self.move_arm_client.send_goal_async(arm_goal, feedback_callback=self.move_arm_feedback_callback)
-
-    # def move_arm_feedback_callback(self, feedback_msg):
-    #     # Process feedback from arm movement, if applicable
-    #     pass
-
-    # def operate_gripper(self, action):
-    #     # Sequence to operate the gripper
-    #     pass
-    #     gripper_goal = OperateGripper.Goal(action=action)
-    #     self.operate_gripper_client.wait_for_server()
-    #     self.operate_gripper_client.send_goal_async(gripper_goal, feedback_callback=self.gripper_feedback_callback)
-
-    # def gripper_feedback_callback(self, feedback_msg):
-    #     # Process feedback from gripper operation, if applicable
-    #     pass
-
-    # def place_block(self):
-    #     # Sequence to place the block at the target location
-    #     pass
 
 def main(args=None):
     rclpy.init(args=args)
-    node = LoCoBotPickPlace()
+    pickplace = LoCoBotPickPlace()
 
-    # Call each task sequentially using spin_once loop
-    while rclpy.ok():
-        # Perform task 1
-        desired_frame = 'locobot/gripper_link'
-        node.start_detection(desired_frame)
-
-        # Spin once to handle ROS events
-        rclpy.spin_once(node)
-
-        # Perform task 2
-        node.move_gripper("open")
-
-        # Spin once to handle ROS events
-        rclpy.spin_once(node)
-
-        # Perform task 3
-        node.move_base_to_block(node.red_point)
-
-        # Spin once to handle ROS events
-        rclpy.spin_once(node)
-
-        node.move_arm([0.44, 0, 0, 0, 90, 0])
-
-        rclpy.spin_once(node)
-        
-        # Perform task 2
-        node.move_gripper("close")
-
-        # Spin once to handle ROS events
-        rclpy.spin_once(node)
+    # Test the gripper
+    pickplace.move_gripper("close") # gripper action should fully complete because of while loop in move_gripper()
+    pickplace.move_gripper("close")
+    pickplace.move_gripper("open") # gripper action should fully complete because of while loop in move_gripper()
 
     # Clean up resources
-    node.destroy_node()
+    pickplace.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
