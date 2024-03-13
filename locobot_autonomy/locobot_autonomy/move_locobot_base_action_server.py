@@ -126,7 +126,6 @@ class MoveBaseActionServer(Node):
                 self.get_logger().info('Action Server Timeout: {0}'.format(time_duration))
                 goal_handle.abort()
                 return result
-            
 
         start_time = time.time()
         # while SharedData.control_base_angle_bool_global and (distance_to_goal < SharedData.goal_stopping_distance) and (angular_distance_to_goal > self.angular_goal_reached_error):

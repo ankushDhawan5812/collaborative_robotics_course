@@ -9,6 +9,7 @@ class MoveGripperActionClient(Node):
     def __init__(self):
         super().__init__('gripper_action_client')
         self.client = ActionClient(self, MoveGripper, 'movegripper')
+        self.action_complete = False
 
     def send_goal(self, command):
         goal_msg = MoveGripper.Goal(command=command)
