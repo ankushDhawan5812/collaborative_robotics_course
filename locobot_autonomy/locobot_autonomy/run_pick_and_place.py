@@ -37,13 +37,14 @@ class LoCoBotPickPlace(Node):
         self.red_point = response.red_points[0].point
         self.move_base_client.get_logger().info(
             f'Result of pix_to_point_cpp for desired_frame {desired_frame}: {self.red_point}')
+        time.sleep(5)
 
     def move_base_to_block(self, pose):
         self.get_logger().info("Moving base to the block")
 
         # detect the block here as well
         self.move_base_client.get_logger().info('Sleeping...')
-        time.sleep(5)
+        # time.sleep(5)
 
         # Goal 1
         self.move_base_client.base_action_complete = False
@@ -53,12 +54,14 @@ class LoCoBotPickPlace(Node):
             rclpy.spin_once(self.move_base_client) # action will stop spinning once the action is completed
             self.move_base_client.get_logger().info('Waiting for base action to complete...')
         self.move_base_client.get_logger().info('Base action complete...')
-        self.move_base_client.base_action_complete = False
+        #self.move_base_client.base_action_complete = False
+        time.sleep(20)
 
     def move_arm(self, arm_pose):
         # Sequence to move the arm above the block, grip it, and lift
         self.get_logger().info("Moving arm to the block")
         self.move_arm_client.send_goal(arm_pose)
+        time.sleep(25)
     
     def move_gripper(self, gripper_state):
         self.get_logger().info(f"Gripper Action: {gripper_state}")
@@ -73,63 +76,46 @@ def main(args=None):
     rclpy.init(args=args)
     pickplace = LoCoBotPickPlace()
 
-
     #STATE MACHINE
     #1. Detect the blocks first (call start_detection)
-    # pickplace.start_detection("/locobot/gripper_link")
-    # time.sleep(5) #Default to ensure action is complete
+    pickplace.start_detection("locobot/gripper_link")
 
     #2. Move the base to the block
+    pose = Pose()
+    pose.position.x = 1.49 #pickplace.red_point.x - 0.44
+    pose.position.y = 0.0 #pickplace.red_point.y
+    pose.position.z = 0.0 #pickplace.red_point.z
+    pose.orientation.x = 0.0
+    pose.orientation.y = 0.0
+    pose.orientation.z = 0.707
+    pose.orientation.w = 0.707
+    pickplace.move_base_to_block(pose)
+    
 
 
+    #3. Open the gripper
+    pickplace.move_gripper("open") # gripper action should fully complete because of while loop in move_gripper()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    #4. Move arm to pick up the block
+    pickplace.move_arm([0.52, 0, 0.0, 0, 90, 0])
 
     # Test the gripper
     #pickplace.move_gripper("close") # gripper action should fully complete because of while loop in move_gripper()
     pickplace.move_gripper("close")
-    pickplace.move_gripper("open") # gripper action should fully complete because of while loop in move_gripper()
 
-    # Test the base
+    pickplace.move_arm([0.5, 0, 0.48, 0, 0, 0])
+
     pose = Pose()
-    pose.position.x = 1.6
-    pose.position.y = 0.0
-    pose.position.z = 0.0
+    pose.position.x = 0.0 #pickplace.red_point.x - 0.44
+    pose.position.y = 0.0 #pickplace.red_point.y
+    pose.position.z = 0.0 #pickplace.red_point.z
     pose.orientation.x = 0.0
     pose.orientation.y = 0.0
     pose.orientation.z = 0.0
     pose.orientation.w = 1.0
     pickplace.move_base_to_block(pose)
-
-    # pickplace.move_gripper("close")
-
-    pickplace.move_arm([0.44, 0, 0.1, 0, 90, 0])
-    #Use time.sleep to wait until move arm finishes executing
-    time.sleep(15)
     
-    pickplace.move_gripper("close")
-
+    
     # Clean up resources
     pickplace.destroy_node()
     rclpy.shutdown()

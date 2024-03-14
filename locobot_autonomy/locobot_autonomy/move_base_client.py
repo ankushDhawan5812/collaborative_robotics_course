@@ -68,7 +68,7 @@ class MoveBaseClient(Node):
             self.base_action_complete = True
             self.get_logger().info('Action completed')
         else:
-            self.base_action_complete = False
+            self.base_action_complete = True
             self.get_logger().info('Action failed')
         self.get_logger().info('Result: {}'.format(result))
 

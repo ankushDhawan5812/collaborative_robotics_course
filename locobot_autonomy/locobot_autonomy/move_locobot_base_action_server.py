@@ -48,8 +48,7 @@ class SharedData:
 
     angular_goal_reached_error = 2*np.pi/180 #2 degrees
 
-    action_server_loop_duration = 1000 #execute the command for up to 10 seconds or until the goal is reached
-    locobot_node_program_stops = False
+    action_server_loop_duration = 10 #execute the command for up to 10 seconds or until the goal is reached
 
 
 class MoveBaseActionServer(Node):
@@ -70,7 +69,6 @@ class MoveBaseActionServer(Node):
         self.previous_distance_to_goal = None
         #optional if you want to have a timeout:
         self.loop_duration = SharedData.action_server_loop_duration #execute the command for up to N seconds or until the goal is reached
-        #self.action_server_stops = SharedData.locobot_node_program_stops # initially false
         
 
 
@@ -111,7 +109,7 @@ class MoveBaseActionServer(Node):
             feedback_msg.distance = distance_to_goal
             self.get_logger().info('Position Feedback: {0}'.format(feedback_msg.distance))
             goal_handle.publish_feedback(feedback_msg)        	
-            #optional code if you want to have a timeout:
+            #optional code if you want ot have a timout:
             time_duration  = time.time() - start_time
             diff_distance = np.abs(distance_to_goal - self.previous_distance_to_goal)
 
@@ -128,11 +126,11 @@ class MoveBaseActionServer(Node):
                 self.get_logger().info('Action Server Timeout: {0}'.format(time_duration))
                 goal_handle.abort()
                 return result
+            
 
         start_time = time.time()
         # while SharedData.control_base_angle_bool_global and (distance_to_goal < SharedData.goal_stopping_distance) and (angular_distance_to_goal > self.angular_goal_reached_error):
-        # keeps running until the locobot node stops
-        while SharedData.control_base_angle_bool_global and (angular_distance_to_goal > self.angular_goal_reached_error) and (SharedData.locobot_node_program_stops == False):
+        while SharedData.control_base_angle_bool_global and (angular_distance_to_goal > self.angular_goal_reached_error):
             angular_distance_to_goal = np.abs(SharedData.angle_error_global)
             feedback_msg.angular_distance = angular_distance_to_goal
             self.get_logger().info('Angular Feedback: {0}'.format(feedback_msg.angular_distance))
@@ -148,21 +146,18 @@ class MoveBaseActionServer(Node):
         #return result (was goal reached)
         result = MoveBase.Result()
 
-        if (distance_to_goal < SharedData.goal_stopping_distance) and (angular_distance_to_goal < self.angular_goal_reached_error) and (SharedData.control_base_angle_bool_global==True) and (SharedData.locobot_node_program_stops == True):
+
+        if (distance_to_goal < SharedData.goal_stopping_distance) and (angular_distance_to_goal < self.angular_goal_reached_error) and (SharedData.control_base_angle_bool_global==True):
             #the goal_stopping_distance is used to determine if the robot is close enough to the goal to stop the action server, as motion of the angular control may introduce some position error
-            self.get_logger().info('Angle Goal Reached')
             result.done = True
             goal_handle.succeed()
-            return result
-        elif (SharedData.control_base_angle_bool_global==False) and (distance_to_goal < SharedData.goal_stopping_distance) and (SharedData.locobot_node_program_stops == True):
+        elif (SharedData.control_base_angle_bool_global==False) and (distance_to_goal < SharedData.goal_stopping_distance):
             #the goal_stopping_distance is used to determine if the robot is close enough to the goal to stop the action server, 
-            self.get_logger().info('Distance Goal Reached')
             result.done = True
             goal_handle.succeed()
-            return result
         else:
             result.done = False
-        #goal_handle.abort()
+
         return result
 
 
@@ -200,7 +195,7 @@ class LocobotExample(Node):
         self.goal_reached_error = SharedData.goal_reached_error #0.01
         self.integrated_error = np.matrix([[0],[0]]) #this is the integrated error for Proportional, Integral (PI) control
 
-        self.Kp_mat = 0.2*np.eye(2) #proportional gain matrix, diagonal with gain of 0.2 (for PID control)
+        self.Kp_mat = 0.5*np.eye(2) #proportional gain matrix, diagonal with gain of 0.2 (for PID control)
         self.Ki_mat = 0.3*np.eye(2) #gain for integral control (for PI control)
 
 
@@ -229,12 +224,6 @@ class LocobotExample(Node):
         elif error < -np.pi:
             error += 2 * np.pi
         return error
-
-    def set_stopping_condition(self):
-        program_stops =  not self.log_stop_cond_bool
-        SharedData.locobot_node_program_stops = program_stops
-        self.get_logger().info("/* log */ program_stops: {0}".format(program_stops))
-        return program_stops
     
     def odom_mobile_base_callback(self, data):
    
@@ -309,7 +298,7 @@ class LocobotExample(Node):
             # self.get_logger().info('/* log */ angle_error: {0}'.format(angle_error))
             
             SharedData.angle_error_global = angle_error
-            Kp_angle_err = 3 #gain for angular error (here a scalar because we are only rotating about the z-axis)
+            Kp_angle_err = 1 #gain for angular error (here a scalar because we are only rotating about the z-axis)
 
             '''
             We do not do perform derivative control here because we are doing velocity control, 
@@ -398,8 +387,7 @@ class LocobotExample(Node):
                 control_input[1] = 0
                 if self.log_stop_cond_bool == True:
                     self.get_logger().info("Stopping condition met")
-                    self.log_stop_cond_bool = False # when this is false we stop the program
-                    self.set_stopping_condition() # set the stopping condition so that the action server can stop
+                    self.log_stop_cond_bool = False
                 # self.get_logger().info("Stopping condition met")
                 self.integrated_error_angle_list = []
                 self.integrated_error_list = []
