@@ -9,6 +9,7 @@ class MoveArmActionClient(Node):
     def __init__(self):
         super().__init__('arm_movement_action_client')
         self.arm_client = ActionClient(self, MoveArm, '/movearm')
+        self.result = None
 
     def send_goal(self, pose):
         goal_msg = MoveArm.Goal(pose=pose)
@@ -27,7 +28,8 @@ class MoveArmActionClient(Node):
         self.result_future.add_done_callback(self.get_result_callback)
 
     def get_result_callback(self, future):
-        result = future.result().result
+        self.result = future.result().result
+        self.get_logger().info("self.result: ", self.result)
         self.get_logger().info(f'Final Arm Position reached')
         self.get_logger().info('Movement completed successfully.')
 

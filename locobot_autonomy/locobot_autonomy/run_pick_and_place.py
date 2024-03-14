@@ -73,6 +73,39 @@ def main(args=None):
     rclpy.init(args=args)
     pickplace = LoCoBotPickPlace()
 
+
+    #STATE MACHINE
+    #1. Detect the blocks first (call start_detection)
+    # pickplace.start_detection("/locobot/gripper_link")
+    # time.sleep(5) #Default to ensure action is complete
+
+    #2. Move the base to the block
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     # Test the gripper
     #pickplace.move_gripper("close") # gripper action should fully complete because of while loop in move_gripper()
     pickplace.move_gripper("close")
@@ -89,6 +122,12 @@ def main(args=None):
     pose.orientation.w = 1.0
     pickplace.move_base_to_block(pose)
 
+    # pickplace.move_gripper("close")
+
+    pickplace.move_arm([0.44, 0, 0.1, 0, 90, 0])
+    #Use time.sleep to wait until move arm finishes executing
+    time.sleep(15)
+    
     pickplace.move_gripper("close")
 
     # Clean up resources

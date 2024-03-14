@@ -111,7 +111,7 @@ class MoveBaseActionServer(Node):
             feedback_msg.distance = distance_to_goal
             self.get_logger().info('Position Feedback: {0}'.format(feedback_msg.distance))
             goal_handle.publish_feedback(feedback_msg)        	
-            #optional code if you want ot have a timout:
+            #optional code if you want to have a timeout:
             time_duration  = time.time() - start_time
             diff_distance = np.abs(distance_to_goal - self.previous_distance_to_goal)
 
@@ -153,14 +153,16 @@ class MoveBaseActionServer(Node):
             self.get_logger().info('Angle Goal Reached')
             result.done = True
             goal_handle.succeed()
+            return result
         elif (SharedData.control_base_angle_bool_global==False) and (distance_to_goal < SharedData.goal_stopping_distance) and (SharedData.locobot_node_program_stops == True):
             #the goal_stopping_distance is used to determine if the robot is close enough to the goal to stop the action server, 
             self.get_logger().info('Distance Goal Reached')
             result.done = True
             goal_handle.succeed()
+            return result
         else:
             result.done = False
-        goal_handle.abort()
+        #goal_handle.abort()
         return result
 
 

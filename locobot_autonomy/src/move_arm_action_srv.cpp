@@ -106,6 +106,7 @@ private:
     // Execute the plan
     if(plan_success) {
       result->success = true;
+      RCLCPP_INFO(this->get_logger(), "RESULT->success is set to true here");
       move_group_interface.execute(plan);
     } else {
       result->success = false;
